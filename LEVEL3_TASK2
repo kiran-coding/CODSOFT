@@ -1,0 +1,130 @@
+1. Setting Up Backend :-
+mkdir server && cd server
+npm init -y
+npm install express mongoose dotenv jsonwebtoken bcryptjs cors
+
+
+2. Create Server File :-
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const app = express();
+require('dotenv').config();
+
+app.use(cors());
+app.use(express.json());
+
+mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+    .then(() => console.log('MongoDB connected'))
+    .catch(err => console.log(err));
+
+app.listen(5000, () => console.log('Server running on port 5000'));
+
+3. User authentication :-
+// models/User.js
+const mongoose = require('mongoose');
+
+const UserSchema = new mongoose.Schema({
+    username: { type: String, required: true, unique: true },
+    password: { type: String, required: true }
+});
+
+module.exports = mongoose.model('User', UserSchema);
+
+
+4. Project and task model :-
+// models/Project.js
+const mongoose = require('mongoose');
+
+const TaskSchema = new mongoose.Schema({
+    title: { type: String, required: true },
+    completed: { type: Boolean, default: false },
+    deadline: { type: Date }
+});
+
+const ProjectSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    tasks: [TaskSchema],
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+});
+
+module.exports = mongoose.model('Project', ProjectSchema);
+ 
+
+5. REACT APP :-
+npx create-react-app client
+cd client
+npm install axios react-router-dom
+
+
+6.Context for global state management :-
+// context/AuthContext.js
+import React, { createContext, useReducer } from 'react';
+
+const AuthContext = createContext();
+
+const authReducer = (state, action) => {
+    switch (action.type) {
+        case 'LOGIN':
+            return { ...state, user: action.payload };
+        case 'LOGOUT':
+            return { ...state, user: null };
+        default:
+            return state;
+    }
+};
+
+export const AuthProvider = ({ children }) => {
+    const [state, dispatch] = useReducer(authReducer, { user: null });
+
+    return (
+        <AuthContext.Provider value={{ state, dispatch }}>
+            {children}
+        </AuthContext.Provider>
+    );
+};
+
+export default AuthContext;
+
+
+7. Implementing Project and Task Functionality :-
+// src/api/projects.js
+import axios from 'axios';
+
+const API_URL = 'http://localhost:5000/api/projects';
+
+export const getProjects = async () => {
+    const response = await axios.get(API_URL);
+    return response.data;
+};
+
+export const createProject = async (projectData) => {
+    const response = await axios.post(API_URL, projectData);
+    return response.data;
+};
+
+
+8. Setup routing in react :-
+// src/App.js
+import React from 'react';
+import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import Dashboard from './pages/Dashboard';
+import Login from './pages/Login';
+import SignUp from './pages/SignUp';
+
+const App = () => {
+    return (
+        <AuthProvider>
+            <Router>
+                <Switch>
+                    <Route path="/" exact component={Dashboard} />
+                    <Route path="/login" component={Login} />
+                    <Route path="/signup" component={SignUp} />
+                </Switch>
+            </Router>
+        </AuthProvider>
+    );
+};
+
+export default App;
